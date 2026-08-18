@@ -1,0 +1,12 @@
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+tsconfig.json
+esbuild.config.mjs
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.vsix
+.DS_Store
+*.map

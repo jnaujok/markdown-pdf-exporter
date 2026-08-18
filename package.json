@@ -1,0 +1,146 @@
+{
+  "name": "markdown-pdf-exporter",
+  "displayName": "Markdown to PDF (with Mermaid & Math)",
+  "description": "Convert Markdown documents to publication-grade PDF files with flawless Mermaid diagrams, KaTeX LaTeX math, tables, and local image resolution.",
+  "version": "1.0.0",
+  "publisher": "codewithgod",
+  "icon": "assets/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dragonwinner/markdown-pdf-exporter.git"
+  },
+  "homepage": "https://github.com/Dragonwinner/markdown-pdf-exporter#readme",
+  "bugs": {
+    "url": "https://github.com/Dragonwinner/markdown-pdf-exporter/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization",
+    "Formatters"
+  ],
+  "keywords": [
+    "markdown",
+    "pdf",
+    "mermaid",
+    "katex",
+    "math",
+    "latex",
+    "export",
+    "diagrams"
+  ],
+  "activationEvents": [
+    "onCommand:markdownPdf.export",
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "markdownPdf.export",
+        "title": "Export Markdown as PDF",
+        "category": "Markdown PDF",
+        "icon": "$(file-pdf)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "markdownPdf.export",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "markdownPdf.export",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/",
+          "group": "markdownPdf@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "markdownPdf.export",
+          "when": "resourceExtname =~ /^\\.(md|markdown)$/",
+          "group": "markdownPdf@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Markdown PDF Exporter",
+      "properties": {
+        "markdownPdf.previewTheme": {
+          "type": "string",
+          "default": "default",
+          "enum": [
+            "default",
+            "neutral",
+            "dark",
+            "forest",
+            "base"
+          ],
+          "description": "Mermaid diagram theme used during PDF compilation."
+        },
+        "markdownPdf.pageSize": {
+          "type": "string",
+          "default": "a4",
+          "enum": [
+            "a4",
+            "letter",
+            "legal"
+          ],
+          "description": "PDF page format size."
+        },
+        "markdownPdf.orientation": {
+          "type": "string",
+          "default": "portrait",
+          "enum": [
+            "portrait",
+            "landscape"
+          ],
+          "description": "PDF page orientation."
+        },
+        "markdownPdf.margin": {
+          "type": "number",
+          "default": 32,
+          "minimum": 10,
+          "maximum": 80,
+          "description": "Page margin in points (pt). Default is 32."
+        },
+        "markdownPdf.highDpi": {
+          "type": "number",
+          "default": 2,
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "description": "Rasterization scale factor for Mermaid diagrams (2 = 2x Retina quality)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p . --noEmit && node esbuild.config.mjs",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18 --watch",
+    "check": "tsc -p . --noEmit",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.6.0",
+    "dompurify": "3.4.13",
+    "esbuild": "^0.25.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "4.2.1",
+    "katex": "0.18.4",
+    "marked": "16.4.2",
+    "mermaid": "11.16.1",
+    "typescript": "^5.7.0"
+  }
+}
