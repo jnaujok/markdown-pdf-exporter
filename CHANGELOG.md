@@ -2,6 +2,14 @@
 
 All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension will be documented in this file.
 
+## [1.0.1] - 2026-08-19
+
+### Improved
+- 📐 Fixed mathematical formula rendering in PDF captures by switching KaTeX to HTML output mode and embedding font styles.
+- 🛡️ Safe DOM placeholder substitution avoiding regex special token replacement collisions (`$`, `'`, `%`).
+- 🎨 Updated official extension icon and banner assets.
+- 🏷️ Updated author and copyright metadata to `codewithgod`.
+
 ## [1.0.0] - 2026-08-19
 
 ### Initial Release
