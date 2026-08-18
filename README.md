@@ -116,5 +116,5 @@ Distributed under the **MIT License**. See [LICENSE](./LICENSE) for details.
 ---
 
 <div align="center">
-  <b>Crafted with ❤️ by StudyWithGod</b>
+  <b>Crafted with ❤️ by codewithgod</b>
 </div>
