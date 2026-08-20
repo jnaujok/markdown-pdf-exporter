@@ -14,6 +14,10 @@
   "bugs": {
     "url": "https://github.com/Dragonwinner/markdown-pdf-exporter/issues"
   },
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
