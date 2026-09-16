@@ -6,5 +6,8 @@ import katexCss from "katex/dist/katex.min.css";
 import { marked } from "marked";
 import mermaid from "mermaid";
 
+export { splitWrappingInlineCode } from "./codeSpanLayout";
+export { sanitizeExportHtml, sanitizeExportSvg } from "./sanitizeHtml";
+
 export default mermaid;
 export { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked };

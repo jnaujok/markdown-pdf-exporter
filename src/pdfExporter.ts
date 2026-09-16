@@ -1,6 +1,10 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { webviewCsp } from "./csp";
+import { DOCUMENT_CSS } from "./documentCss";
 import { inlineLocalImages } from "./imageInliner";
+import { extractMermaidFences } from "./mermaidFences";
+import { createNonce } from "./nonce";
 import { ExportOptions, MarkdownPdfPayload, PdfMessage } from "./types";
 
 export async function exportMarkdownAsPdf(
@@ -140,30 +144,12 @@ function defaultPdfUri(document: vscode.TextDocument): vscode.Uri | undefined {
     : undefined;
 }
 
-function extractMermaidFences(
-  markdown: string,
-  sourceName: string
-): { markdown: string; diagrams: string[]; sourceName: string } {
-  const diagrams: string[] = [];
-  const fencePattern = /^(`{3,}|~{3,})\s*mermaid[^\r\n]*\r?\n([\s\S]*?)^\1\s*$/gim;
-
-  const prepared = markdown.replace(
-    fencePattern,
-    (_match, _fence: string, code: string) => {
-      const index = diagrams.push(code.trim()) - 1;
-      return `\n<div class="mermaid-pdf-diagram" data-mermaid-index="${index}"></div>\n`;
-    }
-  );
-
-  return { markdown: prepared, diagrams, sourceName };
-}
-
 function markdownPdfHtml(
   context: vscode.ExtensionContext,
   webview: vscode.Webview,
   payload: MarkdownPdfPayload
 ): string {
-  const nonce = nonceValue();
+  const nonce = createNonce();
   const runtimeUri = webview.asWebviewUri(
     vscode.Uri.joinPath(context.extensionUri, "dist", "pdfRuntime.js")
   );
@@ -173,190 +159,10 @@ function markdownPdfHtml(
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'nonce-${nonce}' 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource}; font-src ${webview.cspSource} data:;">
+  <meta http-equiv="Content-Security-Policy" content="${webviewCsp(nonce, webview.cspSource)}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style nonce="${nonce}">
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 24px;
-      color: #1f2937;
-      background: #e5e7eb;
-      color-scheme: light;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    .status-bar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      margin: 0 auto 16px;
-      width: 780px;
-      padding: 12px 18px;
-      color: #ffffff;
-      background: #1e293b;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      font-size: 14px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #38bdf8;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    article {
-      width: 780px;
-      margin: 0 auto;
-      padding: 50px 56px;
-      overflow: hidden;
-      color: #111827;
-      background: #ffffff;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-      font-size: 14.5px;
-      line-height: 1.65;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin: 1.3em 0 0.5em;
-      line-height: 1.25;
-      color: #0f172a;
-      font-weight: 700;
-    }
-    h1 {
-      margin-top: 0;
-      font-size: 28px;
-      border-bottom: 2px solid #0284c7;
-      padding-bottom: 8px;
-    }
-    h2 {
-      font-size: 22px;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 6px;
-    }
-    h3 { font-size: 18px; }
-    h4 { font-size: 16px; }
-    p { margin: 0.7em 0; }
-    a { color: #0284c7; text-decoration: underline; }
-    blockquote {
-      margin: 1.2em 0;
-      padding: 0.6em 1.2em;
-      color: #334155;
-      border-left: 4px solid #0284c7;
-      background: #f0f9ff;
-      border-radius: 0 6px 6px 0;
-    }
-    pre {
-      margin: 1.1em 0;
-      padding: 14px;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      border-radius: 6px;
-      font: 12.5px/1.55 Consolas, "Courier New", monospace;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    code {
-      font-family: Consolas, "Courier New", monospace;
-      background: #f1f5f9;
-      padding: 2px 5px;
-      border-radius: 4px;
-      font-size: 0.9em;
-      color: #be185d;
-    }
-    pre code {
-      background: transparent;
-      padding: 0;
-      color: #0f172a;
-    }
-    table {
-      width: 100%;
-      margin: 1.2em 0;
-      border-collapse: collapse;
-      font-size: 13.5px;
-    }
-    th, td {
-      padding: 8px 12px;
-      border: 1px solid #cbd5e1;
-      text-align: left;
-      vertical-align: top;
-    }
-    th {
-      background: #f1f5f9;
-      font-weight: 600;
-      color: #0f172a;
-    }
-    tr:nth-child(even) td {
-      background: #f8fafc;
-    }
-    img {
-      display: block;
-      max-width: 100%;
-      height: auto;
-      margin: 1.2em auto;
-      border-radius: 4px;
-    }
-    .mermaid-pdf-diagram {
-      margin: 20px 0;
-      padding: 16px;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      background: #ffffff;
-      text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .mermaid-pdf-diagram img {
-      display: block;
-      margin: 0 auto;
-      max-width: 100%;
-      height: auto;
-      background: #ffffff;
-    }
-    hr {
-      margin: 1.8em 0;
-      border: 0;
-      border-top: 1px solid #e2e8f0;
-    }
-    ul, ol { padding-left: 26px; margin: 0.7em 0; }
-    li { margin: 0.3em 0; }
-    article > * { break-inside: avoid; }
-    
-    /* KaTeX Math Styling */
-    .math-display {
-      display: block;
-      text-align: center;
-      margin: 1.4em auto;
-      font-size: 1.15em;
-      line-height: 1.4;
-      overflow-x: visible;
-    }
-    .math-inline {
-      display: inline-block;
-      vertical-align: middle;
-      font-size: 1.05em;
-      margin: 0 2px;
-    }
-    .katex {
-      font-family: KaTeX_Main, "Times New Roman", Times, "Cambria Math", "STIX Two Math", serif !important;
-      font-size: 1.1em;
-      line-height: 1.2;
-    }
-    .katex-display {
-      margin: 0.5em 0 !important;
-      text-align: center;
-    }
-    .katex-display > .katex {
-      display: inline-block;
-      white-space: normal;
-      text-align: center;
-    }
+${DOCUMENT_CSS}
   </style>
 </head>
 <body>
@@ -367,7 +173,7 @@ function markdownPdfHtml(
   <article id="document"></article>
 
   <script type="module" nonce="${nonce}">
-    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked } from "${runtimeUri}";
+    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode } from "${runtimeUri}";
 
     const vscode = acquireVsCodeApi();
     const payload = ${data};
@@ -383,6 +189,7 @@ function markdownPdfHtml(
       // Inject KaTeX stylesheet dynamically
       if (katexCss) {
         const styleEl = document.createElement('style');
+        styleEl.setAttribute('nonce', '${nonce}');
         styleEl.textContent = katexCss;
         document.head.appendChild(styleEl);
       }
@@ -413,7 +220,8 @@ function markdownPdfHtml(
           const rendered = katex.renderToString(tex.trim(), {
             displayMode: true,
             output: 'html',
-            throwOnError: false
+            throwOnError: false,
+            trust: false
           });
           const index = mathHolders.push('<div class="math-display">' + rendered + '</div>') - 1;
           return '\\n<div data-pdf-math="' + index + '"></div>\\n';
@@ -430,7 +238,8 @@ function markdownPdfHtml(
           const rendered = katex.renderToString(tex.trim(), {
             displayMode: false,
             output: 'html',
-            throwOnError: false
+            throwOnError: false,
+            trust: false
           });
           const index = mathHolders.push('<span class="math-inline">' + rendered + '</span>') - 1;
           return '<span data-pdf-math="' + index + '"></span>';
@@ -449,19 +258,7 @@ function markdownPdfHtml(
 
       const markedHtml = await marked.parse(md, { gfm: true, breaks: false });
 
-      article.innerHTML = DOMPurify.sanitize(markedHtml, {
-        ADD_ATTR: [
-          'data-mermaid-index', 'data-pdf-math', 'style', 'class',
-          'aria-hidden', 'viewBox', 'width', 'height', 'd', 'fill', 'stroke', 'xmlns'
-        ],
-        ADD_TAGS: [
-          'svg', 'path', 'g', 'rect', 'line', 'polygon', 'text', 'defs',
-          'clipPath', 'use', 'math', 'semantics', 'mrow', 'mi', 'mo', 'mn',
-          'msub', 'msup', 'mfrac', 'msqrt', 'mroot', 'mtext', 'mspace',
-          'mover', 'munder', 'munderover', 'mtable', 'mtr', 'mtd'
-        ],
-        ALLOW_UNKNOWN_PROTOCOLS: true
-      });
+      article.innerHTML = sanitizeExportHtml(DOMPurify, markedHtml);
 
       // 6. Safe DOM-level math placeholder restoration (prevents regex replacement corruptions)
       const mathElements = article.querySelectorAll('[data-pdf-math]');
@@ -469,7 +266,7 @@ function markdownPdfHtml(
         const idx = Number(el.dataset.pdfMath);
         if (!isNaN(idx) && mathHolders[idx] !== undefined) {
           const temp = document.createElement('div');
-          temp.innerHTML = mathHolders[idx];
+          temp.innerHTML = sanitizeExportHtml(DOMPurify, mathHolders[idx]);
           if (temp.firstElementChild) {
             el.replaceWith(temp.firstElementChild);
           }
@@ -511,7 +308,7 @@ function markdownPdfHtml(
           try {
             const renderId = 'mdpdf-diagram-' + i + '-' + Date.now();
             const rendered = await mermaid.render(renderId, source);
-            block.innerHTML = rendered.svg;
+            block.innerHTML = sanitizeExportSvg(DOMPurify, rendered.svg);
 
             const svgEl = block.querySelector('svg');
             if (svgEl) {
@@ -532,10 +329,12 @@ function markdownPdfHtml(
               }
             }
           } catch (err) {
-            block.innerHTML =
+            block.innerHTML = sanitizeExportHtml(
+              DOMPurify,
               '<pre><code>' + esc(source) + '</code></pre>' +
               '<p style="color:#ef4444;font-weight:600">Diagram Render Warning: ' +
-              esc(err?.message || String(err)) + '</p>';
+              esc(err?.message || String(err)) + '</p>'
+            );
           }
         }
       }
@@ -543,6 +342,8 @@ function markdownPdfHtml(
       update('Finalizing layout assets...');
       await waitForImages(article);
       await document.fonts?.ready;
+      splitWrappingInlineCode(article);
+      await tick();
 
       // --- Smart Pagination & jsPDF Assembly ---
       const pageSize = payload.options.pageSize || 'a4';
@@ -648,7 +449,7 @@ function markdownPdfHtml(
             scrollY: 0,
             backgroundColor: '#ffffff',
             logging: false,
-            useCORS: true,
+            useCORS: false,
             imageTimeout: 15000
           });
         } finally {
@@ -794,12 +595,4 @@ function markdownPdfHtml(
 </html>`;
 }
 
-function nonceValue(): string {
-  const alphabet =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let value = "";
-  for (let i = 0; i < 32; i++) {
-    value += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return value;
-}
+

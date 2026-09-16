@@ -2,6 +2,16 @@
 
 All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension will be documented in this file.
 
+## [1.0.2] - 2026-09-16
+
+### Fixed
+- Inline `` `code` `` spans that wrap across a line no longer paint one opaque highlight box over surrounding text in the HTML preview or html2canvas PDF capture.
+
+### Security
+- Tightened webview CSP (`connect-src 'none'`, no `unsafe-eval`, nonce-only style tags).
+- Confined local image inlining to the markdown file directory and workspace folders; rejected URI schemes and path traversal.
+- Sanitizer now drops remote images and unknown protocols; KaTeX `trust` is off; mermaid SVG is sanitized with an SVG profile.
+
 ## [1.0.1] - 2026-08-19
 
 ### Improved
