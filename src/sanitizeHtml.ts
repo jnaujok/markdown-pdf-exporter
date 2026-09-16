@@ -75,17 +75,14 @@ export function dropUnsafeResourceAttrs(node: Element): void {
   const tag = node.tagName.toLowerCase();
 
   if (tag === "img" || tag === "source" || tag === "image") {
-    const src =
-      node.getAttribute("src") ??
-      node.getAttribute("href") ??
-      node.getAttribute("xlink:href") ??
-      "";
-    if (!src || !isSafeDataImage(src)) {
-      node.removeAttribute("src");
-      node.removeAttribute("href");
-      node.removeAttribute("srcset");
-      node.removeAttribute("xlink:href");
+    const attrs = tag === "image" ? ["href", "xlink:href"] : ["src"];
+    for (const attr of attrs) {
+      const value = node.getAttribute(attr);
+      if (value !== null && !isSafeDataImage(value)) {
+        node.removeAttribute(attr);
+      }
     }
+    node.removeAttribute("srcset");
   }
 
   if (tag === "a") {
