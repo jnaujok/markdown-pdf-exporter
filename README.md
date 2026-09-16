@@ -105,7 +105,7 @@ Customize the export pipeline via VS Code Settings (`Ctrl+,` or `Cmd+,` &rarr; s
 
 - **100% Local & Offline:** No data, markdown content, diagrams, or images are ever transmitted to any external server.
 - **Zero External CLI Dependencies:** No headless Chrome or Puppeteer download required.
-- **Content Security Policy (CSP):** Built with hardened webview security preventing unauthorized scripts or network access.
+- **Content Security Policy (CSP):** Built with hardened webview security preventing unauthorized scripts or network access. Local images are inlined only from the document folder and workspace.
 
 ---
 

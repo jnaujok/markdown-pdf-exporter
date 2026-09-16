@@ -2,7 +2,7 @@
   "name": "markdown-pdf-exporter",
   "displayName": "Markdown to PDF (with Mermaid & Math)",
   "description": "Convert Markdown documents to publication-grade PDF files with flawless Mermaid diagrams, KaTeX LaTeX math, tables, and local image resolution.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "codewithgod",
   "icon": "assets/icon.png",
   "license": "MIT",
@@ -37,9 +37,14 @@
     "diagrams"
   ],
   "activationEvents": [
-    "onCommand:markdownPdf.export",
-    "onLanguage:markdown"
+    "onCommand:markdownPdf.export"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Export executes document Markdown, Mermaid, and math in a local webview."
+    }
+  },
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -132,6 +137,8 @@
     "compile": "tsc -p . --noEmit && node esbuild.config.mjs",
     "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18 --watch",
     "check": "tsc -p . --noEmit",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
     "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
@@ -145,6 +152,9 @@
     "katex": "0.18.4",
     "marked": "16.4.2",
     "mermaid": "11.16.1",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4"
   }
 }

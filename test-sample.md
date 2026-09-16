@@ -141,3 +141,10 @@ export class CircuitBreaker {
   }
 }
 ```
+
+---
+
+## 6. Inline code wrapping (regression)
+
+When an inline code span wraps across a line end, each line fragment must keep its own highlight. The highlight must not paint one opaque rectangle that erases the surrounding sentence. This paragraph is deliberately long so the following token wraps: `abcdefghijklmnopqrstuvwxyz-wrap-test-token-one-two-three-four-five-six-seven-eight-nine-ten` sits in the middle of ordinary words on both sides, and a second example uses a spaced phrase `this inline code span is intentionally verbose so the renderer must wrap it across a line boundary without covering neighbors`.
+

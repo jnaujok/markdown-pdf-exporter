@@ -1,12 +1,16 @@
 .vscode/**
 .vscode-test/**
 src/**
+tests/**
+coverage/**
 node_modules/**
 tsconfig.json
 esbuild.config.mjs
+vitest.config.ts
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
 *.vsix
 .DS_Store
 *.map
+test-sample.md
