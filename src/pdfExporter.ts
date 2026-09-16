@@ -185,6 +185,16 @@ ${DOCUMENT_CSS}
       vscode.postMessage({ type: 'progress', message: msg });
     };
 
+    const attachSanitizedSvg = (container, svgMarkup) => {
+      const temp = document.createElement('div');
+      temp.innerHTML = sanitizeExportSvg(DOMPurify, svgMarkup);
+      temp.querySelectorAll('svg style').forEach(style => {
+        style.setAttribute('nonce', '${nonce}');
+      });
+      container.replaceChildren(...temp.childNodes);
+      return container.querySelector('svg');
+    };
+
     try {
       // Inject KaTeX stylesheet dynamically
       if (katexCss) {
@@ -308,9 +318,7 @@ ${DOCUMENT_CSS}
           try {
             const renderId = 'mdpdf-diagram-' + i + '-' + Date.now();
             const rendered = await mermaid.render(renderId, source);
-            block.innerHTML = sanitizeExportSvg(DOMPurify, rendered.svg);
-
-            const svgEl = block.querySelector('svg');
+            const svgEl = attachSanitizedSvg(block, rendered.svg);
             if (svgEl) {
               const dpiScale = payload.options.highDpi || 2;
               const png = await withTimeout(svgToPng(svgEl, dpiScale), 10000);
@@ -594,5 +602,4 @@ ${DOCUMENT_CSS}
 </body>
 </html>`;
 }
-
 
