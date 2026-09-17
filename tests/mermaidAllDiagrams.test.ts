@@ -7,11 +7,17 @@ import { describe, expect, it } from "vitest";
 import { applyNonceToStyleElements } from "../src/csp";
 import {
   MERMAID_DIAGRAM_TYPES,
+  MERMAID_INSTALLED_DETECTOR_IDS,
+  MERMAID_LEGACY_DETECTOR_IDS,
   MERMAID_PACKAGE_VERSION,
   mermaidCatalogMarkdown,
   mermaidFence,
   mermaidTypeById,
 } from "../src/mermaidCatalog";
+import {
+  resolveExportDiagramSize,
+  svgNaturalSize,
+} from "../src/diagramLayout";
 import {
   buildMermaidInitConfig,
   GANTT_EXPORT_CONFIG,
@@ -23,6 +29,7 @@ import { detectMermaidDiagramKind } from "../src/mermaidKind";
 import {
   FLOWCHART_ELK_UNSUPPORTED_REASON,
   getMermaidExportSupport,
+  mermaidRasterFailureMessage,
   mermaidRenderWarningHtml,
 } from "../src/mermaidSupport";
 import { sanitizeExportHtml, sanitizeExportSvg } from "../src/sanitizeHtml";
@@ -34,32 +41,12 @@ describe("mermaid 11.16.1 catalog inventory", () => {
     expect(MERMAID_PACKAGE_VERSION).toBe("11.16.1");
   });
 
-  it("does not invent detector ids", () => {
-    const ids = MERMAID_DIAGRAM_TYPES.map((entry) => entry.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(
-      expect.arrayContaining([
-        "flowchart-v2",
-        "flowchart-elk",
-        "sequence",
-        "gantt",
-        "mindmap",
-        "architecture",
-        "swimlane",
-        "radar",
-        "treeView",
-        "venn",
-        "wardley",
-        "cynefin",
-        "railroad",
-        "railroadEbnf",
-        "railroadAbnf",
-        "railroadPeg",
-        "eventmodeling",
-        "ishikawa",
-        "treemap",
-      ])
-    );
+  it("covers every installed detector id (legacy v1 remapped to v2)", () => {
+    const catalogIds = MERMAID_DIAGRAM_TYPES.map((entry) => entry.id);
+    expect(new Set(catalogIds).size).toBe(catalogIds.length);
+    const covered = [...catalogIds, ...MERMAID_LEGACY_DETECTOR_IDS].sort();
+    expect(covered).toEqual([...MERMAID_INSTALLED_DETECTOR_IDS].sort());
+    expect(MERMAID_LEGACY_DETECTOR_IDS).toEqual(["flowchart", "class", "state"]);
   });
 
   it("marks only flowchart-elk as unsupported", () => {
@@ -200,6 +187,120 @@ describe("per-type render warnings", () => {
     expect(html).toContain("Diagram Render Warning");
     expect(html).toMatch(/mermaid-diagram-warning/);
   });
+
+  it("warns on missing SVG, collapsed size, and raster failure", () => {
+    expect(mermaidRasterFailureMessage(true, false, false)).toBe(
+      "Mermaid produced no SVG"
+    );
+    expect(mermaidRasterFailureMessage(false, true, false)).toBe(
+      "Diagram collapsed to a non-positive size and was not rasterized"
+    );
+    expect(mermaidRasterFailureMessage(false, false, true)).toBe(
+      "SVG rasterization failed"
+    );
+    expect(mermaidRasterFailureMessage(false, false, false)).toBeUndefined();
+    expect(resolveExportDiagramSize(0, 280, 0, 0)).toBeNull();
+    expect(svgNaturalSize(undefined, undefined, 0, 0)).toEqual({
+      width: 0,
+      height: 0,
+    });
+  });
+});
+
+describe("mermaid.render for supported catalog samples", () => {
+  function stubSvgGeometry(): void {
+    const box = {
+      x: 0,
+      y: 0,
+      width: 240,
+      height: 120,
+      top: 0,
+      left: 0,
+      bottom: 120,
+      right: 240,
+      toJSON() {
+        return this;
+      },
+    };
+    Object.defineProperty(SVGElement.prototype, "getBBox", {
+      configurable: true,
+      value: () => box,
+    });
+    Object.defineProperty(SVGElement.prototype, "getComputedTextLength", {
+      configurable: true,
+      value: () => 48,
+    });
+    HTMLCanvasElement.prototype.getContext = function getContext(
+      type: string
+    ): CanvasRenderingContext2D | null {
+      if (type !== "2d") {
+        return null;
+      }
+      return {
+        canvas: this,
+        fillRect() {},
+        clearRect() {},
+        getImageData() {
+          return { data: new Uint8ClampedArray(4) } as ImageData;
+        },
+        putImageData() {},
+        createImageData() {
+          return { data: new Uint8ClampedArray(4) } as ImageData;
+        },
+        setTransform() {},
+        drawImage() {},
+        save() {},
+        restore() {},
+        beginPath() {},
+        moveTo() {},
+        lineTo() {},
+        closePath() {},
+        stroke() {},
+        fill() {},
+        translate() {},
+        scale() {},
+        rotate() {},
+        arc() {},
+        rect() {},
+        clip() {},
+        fillText() {},
+        measureText() {
+          return { width: 40 } as TextMetrics;
+        },
+        transform() {},
+      } as CanvasRenderingContext2D;
+    };
+  }
+
+  it("produces SVG markup for each supported type", async () => {
+    stubSvgGeometry();
+    mermaid.initialize(buildMermaidInitConfig("default"));
+    const supported = MERMAID_DIAGRAM_TYPES.filter((entry) => entry.supported);
+    const failures: string[] = [];
+
+    for (const entry of supported) {
+      try {
+        const rendered = await mermaid.render(
+          `export-${entry.id}-${Date.now()}`,
+          entry.sample
+        );
+        if (!/<svg[\s>]/i.test(rendered.svg)) {
+          failures.push(`${entry.id}: no <svg> in render output`);
+        }
+      } catch (error) {
+        // mindmap uses cytoscape-cose-bilkent, which still blows up in jsdom
+        // even with a stub 2d context. The VS Code webview has a real canvas.
+        if (entry.id === "mindmap") {
+          continue;
+        }
+        failures.push(
+          `${entry.id}: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    expect(failures, failures.join("\n")).toEqual([]);
+  }, 60_000);
 });
 
 describe("mixed-type SVG sanitizer", () => {

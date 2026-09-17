@@ -12,6 +12,7 @@ import {
   PRINTABLE_DIAGRAM_HEIGHT,
   PRINTABLE_DIAGRAM_WIDTH,
   rasterTimeoutMs,
+  resolveExportDiagramSize,
   svgNaturalSize,
 } from "../src/diagramLayout";
 import { extractMermaidFences } from "../src/mermaidFences";
@@ -132,8 +133,17 @@ describe("diagram layout for wide gantt", () => {
     expect(svgNaturalSize(636, 280, 0, 0)).toEqual({ width: 636, height: 280 });
     expect(svgNaturalSize(0, 0, 400, 200)).toEqual({ width: 400, height: 200 });
     expect(svgNaturalSize(undefined, undefined, 0, 0)).toEqual({
+      width: 0,
+      height: 0,
+    });
+    expect(svgNaturalSize(undefined, undefined, undefined, undefined)).toEqual({
       width: 800,
       height: 600,
+    });
+    expect(resolveExportDiagramSize(undefined, undefined, 0, 0)).toBeNull();
+    expect(resolveExportDiagramSize(636, 280, 0, 0)).toEqual({
+      width: 636,
+      height: 280,
     });
   });
 

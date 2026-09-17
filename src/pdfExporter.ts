@@ -173,7 +173,7 @@ ${DOCUMENT_CSS}
   <article id="document"></article>
 
   <script type="module" nonce="${nonce}">
-    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, buildMermaidInitConfig, fitDiagramToPage, getMermaidExportSupport, mermaidRenderWarningHtml, PRINTABLE_DIAGRAM_HEIGHT, rasterTimeoutMs, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode, svgNaturalSize } from "${runtimeUri}";
+    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, buildMermaidInitConfig, fitDiagramToPage, getMermaidExportSupport, mermaidRasterFailureMessage, mermaidRenderWarningHtml, PRINTABLE_DIAGRAM_HEIGHT, rasterTimeoutMs, resolveExportDiagramSize, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode } from "${runtimeUri}";
 
     const vscode = acquireVsCodeApi();
     const payload = ${data};
@@ -315,38 +315,50 @@ ${DOCUMENT_CSS}
             const renderId = 'mdpdf-diagram-' + i + '-' + Date.now();
             const rendered = await mermaid.render(renderId, source);
             const svgEl = attachSanitizedSvg(block, rendered.svg);
-            if (svgEl) {
-              const dpiScale = payload.options.highDpi || 2;
-              const box = svgEl.viewBox?.baseVal;
-              const bounds = svgEl.getBoundingClientRect();
-              const size = svgNaturalSize(
-                box?.width,
-                box?.height,
-                bounds.width,
-                bounds.height
+            const box = svgEl?.viewBox?.baseVal;
+            const bounds = svgEl?.getBoundingClientRect?.();
+            const size = svgEl
+              ? resolveExportDiagramSize(
+                  box?.width,
+                  box?.height,
+                  bounds?.width,
+                  bounds?.height
+                )
+              : null;
+            const png = svgEl && size
+              ? await withTimeout(
+                  svgToPng(svgEl, payload.options.highDpi || 2, size),
+                  rasterTimeoutMs(size.width, size.height, payload.options.highDpi || 2)
+                )
+              : null;
+            const rasterFailure = mermaidRasterFailureMessage(
+              !svgEl,
+              !size,
+              !(png && png.width >= 1 && png.height >= 1)
+            );
+            if (rasterFailure) {
+              block.innerHTML = sanitizeExportHtml(
+                DOMPurify,
+                mermaidRenderWarningHtml(support.kind, source, rasterFailure)
               );
-              const png = await withTimeout(
-                svgToPng(svgEl, dpiScale, size),
-                rasterTimeoutMs(size.width, size.height, dpiScale)
-              );
-              if (png && png.width >= 1 && png.height >= 1) {
-                const img = document.createElement('img');
-                const availableWidth = Math.max(1, block.clientWidth - 32);
-                const fit = fitDiagramToPage(
-                  png.width,
-                  png.height,
-                  availableWidth,
-                  PRINTABLE_DIAGRAM_HEIGHT
-                );
-
-                img.src = png.url;
-                img.alt = 'Mermaid Diagram ' + (i + 1);
-                img.width = fit.width;
-                img.height = fit.height;
-                block.innerHTML = '';
-                block.appendChild(img);
-              }
+              continue;
             }
+
+            const img = document.createElement('img');
+            const availableWidth = Math.max(1, block.clientWidth - 32);
+            const fit = fitDiagramToPage(
+              png.width,
+              png.height,
+              availableWidth,
+              PRINTABLE_DIAGRAM_HEIGHT
+            );
+
+            img.src = png.url;
+            img.alt = 'Mermaid Diagram ' + (i + 1);
+            img.width = fit.width;
+            img.height = fit.height;
+            block.innerHTML = '';
+            block.appendChild(img);
           } catch (err) {
             block.innerHTML = sanitizeExportHtml(
               DOMPurify,

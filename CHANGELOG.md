@@ -10,8 +10,10 @@ All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension w
 - Per-type **Diagram Render Warning (`keyword`)** when a fence fails or is unsupported. `flowchart-elk` is documented as unsupported: ELK is not bundled.
 
 ### Fixed
-- SVG→PNG no longer uses `width \|\| fallback` after natural size is known, so an explicit 0×N canvas cannot become an 800×600 default.
+- SVG→PNG no longer uses `width || fallback` after natural size is known, so an explicit 0×N canvas cannot become an 800×600 default. Collapsed measurements now skip rasterization and show the per-type warning.
+- Missing SVG, collapsed size, and PNG failure all keep the source fence plus **Diagram Render Warning** instead of leaving a blank sanitized SVG.
 - Journey/timeline labels use `textPlacement: tspan` instead of foreignObject. TreeView default icons stay off; Kanban ticket URLs are not injected.
+- Wardley printable sizing is applied under both `wardley-beta` (what mermaid@11.16.1 reads) and `wardley`.
 
 ## [1.0.4] - 2026-09-17
 

@@ -64,7 +64,9 @@ Unlike traditional PDF exporters that rely on external browser processes (Puppet
 | Railroad | `railroad-beta`, `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` | Supported (experimental) |
 | Flowchart ELK | `flowchart-elk` | **Unsupported.** mermaid@11.16.1 registers the detector but does not bundle `@mermaid-js/layout-elk`. Export shows a per-type warning with the source fence instead of failing silently. Use `flowchart` / `graph` (dagre). |
 
-If a supported type still fails to parse or render, the PDF/HTML preview keeps the source fence and a red **Diagram Render Warning (`keyword`)** — it does not drop the diagram.
+If a supported type still fails to parse or render, the PDF/HTML preview keeps the source fence and a red **Diagram Render Warning (`keyword`)** — it does not drop the diagram. Raster failures (no SVG, collapsed 0×0 viewBox, PNG timeout) use the same warning path.
+
+Legacy mermaid detectors `flowchart`, `class`, and `state` remain registered in mermaid@11.16.1. Export selects the v2 detectors (`flowchart-v2`, `classDiagram`, `stateDiagram`) via `defaultRenderer: "dagre-wrapper"`. `graph` / `classDiagram` / `stateDiagram` samples still export.
 
 ### 2. 📐 Full KaTeX LaTeX Math Typesetting
 - Seamless inline math: `$E = mc^2$`

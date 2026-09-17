@@ -22,6 +22,55 @@ export interface MermaidTypeEntry {
 
 export const MERMAID_PACKAGE_VERSION = "11.16.1";
 
+/**
+ * Detector ids registered in mermaid@11.16.1 `mermaid.core.mjs`
+ * (excludes internal `error` and `---` YAML-front-matter traps).
+ * Legacy `flowchart` / `class` / `state` stay registered; export config
+ * selects the v2 detectors via `defaultRenderer: "dagre-wrapper"`.
+ */
+export const MERMAID_INSTALLED_DETECTOR_IDS = [
+  "architecture",
+  "block",
+  "c4",
+  "class",
+  "classDiagram",
+  "cynefin",
+  "er",
+  "eventmodeling",
+  "flowchart",
+  "flowchart-elk",
+  "flowchart-v2",
+  "gantt",
+  "gitGraph",
+  "info",
+  "ishikawa",
+  "journey",
+  "kanban",
+  "mindmap",
+  "packet",
+  "pie",
+  "quadrantChart",
+  "radar",
+  "railroad",
+  "railroadAbnf",
+  "railroadEbnf",
+  "railroadPeg",
+  "requirement",
+  "sankey",
+  "sequence",
+  "state",
+  "stateDiagram",
+  "swimlane",
+  "timeline",
+  "treeView",
+  "treemap",
+  "venn",
+  "wardley",
+  "xychart",
+] as const;
+
+export const MERMAID_LEGACY_DETECTOR_IDS = ["flowchart", "class", "state"] as const;
+
 export const MERMAID_DIAGRAM_TYPES: readonly MermaidTypeEntry[] = [
   {
     id: "flowchart-v2",

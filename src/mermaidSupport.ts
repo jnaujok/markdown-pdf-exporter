@@ -27,6 +27,23 @@ export function getMermaidExportSupport(source: string): MermaidExportSupport {
   return { supported: true, kind };
 }
 
+export function mermaidRasterFailureMessage(
+  svgMissing: boolean,
+  sizeMissing: boolean,
+  pngMissing: boolean
+): string | undefined {
+  if (svgMissing) {
+    return "Mermaid produced no SVG";
+  }
+  if (sizeMissing) {
+    return "Diagram collapsed to a non-positive size and was not rasterized";
+  }
+  if (pngMissing) {
+    return "SVG rasterization failed";
+  }
+  return undefined;
+}
+
 export function mermaidRenderWarningHtml(
   kind: string,
   source: string,

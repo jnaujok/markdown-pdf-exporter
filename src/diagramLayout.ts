@@ -28,11 +28,37 @@ export function svgNaturalSize(
   fallbackWidth = 800,
   fallbackHeight = 600
 ): DiagramSize {
-  const width =
-    positive(viewBoxWidth) || positive(boundingWidth) || fallbackWidth;
-  const height =
-    positive(viewBoxHeight) || positive(boundingHeight) || fallbackHeight;
-  return { width, height };
+  const width = positive(viewBoxWidth) || positive(boundingWidth);
+  const height = positive(viewBoxHeight) || positive(boundingHeight);
+  if (width > 0 && height > 0) {
+    return { width, height };
+  }
+
+  if (isExplicitNumber(viewBoxWidth) || isExplicitNumber(viewBoxHeight) ||
+      isExplicitNumber(boundingWidth) || isExplicitNumber(boundingHeight)) {
+    return { width: 0, height: 0 };
+  }
+
+  return { width: fallbackWidth, height: fallbackHeight };
+}
+
+/** Null when the SVG is collapsed; never fabricate a default canvas from 0×0. */
+export function resolveExportDiagramSize(
+  viewBoxWidth: number | undefined,
+  viewBoxHeight: number | undefined,
+  boundingWidth: number,
+  boundingHeight: number
+): DiagramSize | null {
+  const size = svgNaturalSize(
+    viewBoxWidth,
+    viewBoxHeight,
+    boundingWidth,
+    boundingHeight
+  );
+  if (size.width < 1 || size.height < 1) {
+    return null;
+  }
+  return size;
 }
 
 export function fitDiagramToPage(
@@ -82,4 +108,8 @@ function positive(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : 0;
+}
+
+function isExplicitNumber(value: number | undefined): boolean {
+  return typeof value === "number" && Number.isFinite(value);
 }

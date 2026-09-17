@@ -15,7 +15,9 @@ export const PRINTABLE_DIAGRAM_BOX = {
 
 /**
  * mermaid@11.16.1 config keys that accept BaseDiagramConfig sizing.
- * Includes experimental types (`wardley-beta`, radar, railroad, …).
+ * Includes experimental types. Wardley 11.16.1 reads `wardley-beta`
+ * (see wardleyDiagram getConfig); `wardley` is set as well so a renderer
+ * keyed on parseType cannot miss printable sizing.
  */
 export const MERMAID_SIZING_CONFIG_KEYS = [
   "flowchart",
@@ -44,6 +46,7 @@ export const MERMAID_SIZING_CONFIG_KEYS = [
   "treeView",
   "radar",
   "venn",
+  "wardley",
   "wardley-beta",
   "cynefin",
   "railroad",
