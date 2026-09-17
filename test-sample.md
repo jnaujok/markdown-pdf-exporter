@@ -148,3 +148,38 @@ export class CircuitBreaker {
 
 When an inline code span wraps across a line end, each line fragment must keep its own highlight. The highlight must not paint one opaque rectangle that erases the surrounding sentence. This paragraph is deliberately long so the following token wraps: `abcdefghijklmnopqrstuvwxyz-wrap-test-token-one-two-three-four-five-six-seven-eight-nine-ten` sits in the middle of ordinary words on both sides, and a second example uses a spaced phrase `this inline code span is intentionally verbose so the renderer must wrap it across a line boundary without covering neighbors`.
 
+---
+
+## 7. Platform Delivery Schedule (Gantt)
+
+A realistic multi-section Gantt with done / active / critical tasks, a milestone, weekend exclusions, and `after` dependencies. This must raster into the printable column without collapsing or timing out.
+
+```mermaid
+gantt
+    title Q3 Platform Delivery
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+    tickInterval 1week
+    excludes    weekends
+    weekday     monday
+
+    section Discovery
+    Stakeholder interviews       :done,    disc1, 2026-07-01, 10d
+    Architecture spike           :done,    disc2, after disc1, 8d
+
+    section Build
+    Auth service                 :active,  build1, 2026-07-20, 21d
+    Order API                    :         build2, after disc2, 18d
+    Payment adapter              :crit,    build3, after build1, 14d
+
+    section QA
+    Integration tests            :         qa1, after build2, 10d
+    Load testing                 :         qa2, after build3, 7d
+    Security review              :crit,    qa3, after qa1, 5d
+
+    section Release
+    Staging rollout              :         rel1, after qa3, 4d
+    Production cutover           :milestone, rel2, after rel1, 0d
+```
+
+

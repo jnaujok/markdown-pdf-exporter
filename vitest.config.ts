@@ -9,9 +9,12 @@ export default defineConfig({
       include: [
         "src/codeSpanLayout.ts",
         "src/csp.ts",
+        "src/diagramLayout.ts",
         "src/documentCss.ts",
         "src/imagePath.ts",
+        "src/mermaidConfig.ts",
         "src/mermaidFences.ts",
+        "src/mermaidKind.ts",
         "src/nonce.ts",
         "src/sanitizeHtml.ts",
       ],

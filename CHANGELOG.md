@@ -2,6 +2,17 @@
 
 All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension will be documented in this file.
 
+## [1.0.4] - 2026-09-17
+
+### Fixed
+- Mermaid **Gantt** charts now export at a printable width. Gantt uniquely sizes from the temp SVG parent's `offsetWidth` (often `0` or the full webview body during `mermaid.render()`), which collapsed the viewBox or produced a huge raster that hit the 10s PNG timeout.
+- Gantt init now pins `gantt.useWidth` to the article column and sets `gantt.useMaxWidth: false` so SVG→PNG gets real pixel dimensions. `securityLevel` stays `strict`; `htmlLabels` stays `false`.
+- Wide-diagram PNG timeout scales with megapixels (capped) instead of a flat 10s. Empty viewBoxes are rejected instead of rasterizing a 0×N canvas.
+- Per-type render warnings include the diagram keyword (for example `gantt`) when Mermaid throws.
+
+### Added
+- Realistic Q3 platform-delivery Gantt sample in `test-sample.md`.
+
 ## [1.0.3] - 2026-09-16
 
 ### Fixed
