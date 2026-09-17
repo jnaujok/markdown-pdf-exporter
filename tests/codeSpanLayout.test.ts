@@ -28,6 +28,10 @@ describe("DOCUMENT_CSS inline code wrapping", () => {
     expect(DOCUMENT_CSS).toMatch(/pre code\s*\{[^}]*background:\s*transparent/s);
   });
 
+  it("styles per-type mermaid render warnings", () => {
+    expect(DOCUMENT_CSS).toMatch(/\.mermaid-diagram-warning/);
+  });
+
   it("keeps a wrapping inline-code regression in test-sample.md", () => {
     const sample = readFileSync(
       path.join(__dirname, "..", "test-sample.md"),

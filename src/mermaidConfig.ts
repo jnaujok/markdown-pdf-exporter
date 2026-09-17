@@ -4,13 +4,59 @@ export const MERMAID_FONT_FAMILY =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 /**
+ * Shared printable box for every mermaid diagram type. useMaxWidth: true
+ * emits width=100% which collapses in mermaid.render()'s temp wrapper.
+ * Pin useWidth so SVG→PNG gets real px without weakening CSP.
+ */
+export const PRINTABLE_DIAGRAM_BOX = {
+  useMaxWidth: false,
+  useWidth: PRINTABLE_DIAGRAM_WIDTH,
+} as const;
+
+/**
+ * mermaid@11.16.1 config keys that accept BaseDiagramConfig sizing.
+ * Includes experimental types (`wardley-beta`, radar, railroad, …).
+ */
+export const MERMAID_SIZING_CONFIG_KEYS = [
+  "flowchart",
+  "swimlane",
+  "sequence",
+  "gantt",
+  "journey",
+  "timeline",
+  "class",
+  "state",
+  "er",
+  "pie",
+  "quadrantChart",
+  "xyChart",
+  "requirement",
+  "architecture",
+  "mindmap",
+  "ishikawa",
+  "kanban",
+  "gitGraph",
+  "c4",
+  "sankey",
+  "packet",
+  "block",
+  "eventmodeling",
+  "treeView",
+  "radar",
+  "venn",
+  "wardley-beta",
+  "cynefin",
+  "railroad",
+  "treemap",
+] as const;
+
+/**
  * Gantt uniquely sizes from the temp SVG parent's offsetWidth (0 in a hidden
  * mermaid.render() wrapper, or the full webview body if not). Pin useWidth to
  * the printable column and disable useMaxWidth so rasterization gets real px.
  */
 export const GANTT_EXPORT_CONFIG = {
-  useMaxWidth: false,
-  useWidth: PRINTABLE_DIAGRAM_WIDTH,
+  ...PRINTABLE_DIAGRAM_BOX,
   leftPadding: 120,
   rightPadding: 80,
   topPadding: 50,
@@ -22,6 +68,14 @@ export const GANTT_EXPORT_CONFIG = {
   axisFormat: "%Y-%m-%d",
   topAxis: false,
 } as const;
+
+function printableTypeConfig(): Record<string, unknown> {
+  const config: Record<string, unknown> = {};
+  for (const key of MERMAID_SIZING_CONFIG_KEYS) {
+    config[key] = { ...PRINTABLE_DIAGRAM_BOX };
+  }
+  return config;
+}
 
 export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
   return {
@@ -39,6 +93,46 @@ export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
       lineColor: "#374151",
       textColor: "#111827",
     },
+    ...printableTypeConfig(),
+    flowchart: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      htmlLabels: false,
+      defaultRenderer: "dagre-wrapper",
+    },
+    class: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      htmlLabels: false,
+      defaultRenderer: "dagre-wrapper",
+    },
+    sequence: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      actorFontFamily: MERMAID_FONT_FAMILY,
+      noteFontFamily: MERMAID_FONT_FAMILY,
+      messageFontFamily: MERMAID_FONT_FAMILY,
+    },
+    journey: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      textPlacement: "tspan",
+      taskFontFamily: MERMAID_FONT_FAMILY,
+    },
+    timeline: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      textPlacement: "tspan",
+      taskFontFamily: MERMAID_FONT_FAMILY,
+    },
     gantt: { ...GANTT_EXPORT_CONFIG },
+    architecture: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      randomize: false,
+      seed: 1,
+    },
+    treeView: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      showIcons: false,
+    },
+    kanban: {
+      ...PRINTABLE_DIAGRAM_BOX,
+      ticketBaseUrl: "",
+    },
   };
 }

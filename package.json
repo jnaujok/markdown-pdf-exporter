@@ -2,7 +2,7 @@
   "name": "markdown-pdf-exporter",
   "displayName": "Markdown to PDF (with Mermaid & Math)",
   "description": "Convert Markdown documents to publication-grade PDF files with flawless Mermaid diagrams, KaTeX LaTeX math, tables, and local image resolution.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "codewithgod",
   "icon": "assets/icon.png",
   "license": "MIT",

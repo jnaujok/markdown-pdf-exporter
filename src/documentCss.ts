@@ -150,6 +150,12 @@ export const DOCUMENT_CSS = `
       height: auto;
       background: #ffffff;
     }
+    .mermaid-diagram-warning {
+      color: #ef4444;
+      font-weight: 600;
+      text-align: left;
+      margin: 0.6em 0 0;
+    }
     hr {
       margin: 1.8em 0;
       border: 0;
