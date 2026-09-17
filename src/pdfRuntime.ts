@@ -16,6 +16,10 @@ export {
 } from "./diagramLayout";
 export { buildMermaidInitConfig } from "./mermaidConfig";
 export { detectMermaidDiagramKind } from "./mermaidKind";
+export {
+  getMermaidExportSupport,
+  mermaidRenderWarningHtml,
+} from "./mermaidSupport";
 export { sanitizeExportHtml, sanitizeExportSvg } from "./sanitizeHtml";
 
 export default mermaid;

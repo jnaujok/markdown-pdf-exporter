@@ -182,4 +182,34 @@ gantt
     Production cutover           :milestone, rel2, after rel1, 0d
 ```
 
+---
+
+## 8. Additional Mermaid types
+
+Export covers every diagram detector shipped in mermaid@11.16.1 except `flowchart-elk` (ELK is not bundled). Full sample fences live in `samples/mermaid-all-diagrams.md`.
+
+```mermaid
+radar-beta
+  title Skills
+  axis docs["Docs"], tests["Tests"], ux["UX"], perf["Perf"]
+  curve a["Current"]{4, 3, 2, 4}
+  curve b["Target"]{5, 4, 4, 4}
+  max 5
+```
+
+```mermaid
+venn-beta
+set A ["Backend"]
+set B ["Frontend"]
+union A,B ["Full-stack"]
+```
+
+```mermaid
+architecture-beta
+    group api(cloud)[API]
+    service db(database)[Database] in api
+    service server(server)[Server] in api
+    db:L -- R:server
+```
+
 

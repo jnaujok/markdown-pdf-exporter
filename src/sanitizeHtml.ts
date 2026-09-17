@@ -2,7 +2,18 @@ import type { Config } from "dompurify";
 
 export const EXPORT_SVG_PURIFY_CONFIG: Config = {
   USE_PROFILES: { svg: true, svgFilters: true },
-  ADD_TAGS: ["use"],
+  ADD_TAGS: [
+    "use",
+    "circle",
+    "ellipse",
+    "polyline",
+    "tspan",
+    "marker",
+    "textPath",
+    "symbol",
+    "title",
+    "desc",
+  ],
   ALLOW_UNKNOWN_PROTOCOLS: false,
 };
 

@@ -173,7 +173,7 @@ ${DOCUMENT_CSS}
   <article id="document"></article>
 
   <script type="module" nonce="${nonce}">
-    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, buildMermaidInitConfig, detectMermaidDiagramKind, fitDiagramToPage, PRINTABLE_DIAGRAM_HEIGHT, rasterTimeoutMs, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode, svgNaturalSize } from "${runtimeUri}";
+    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, buildMermaidInitConfig, fitDiagramToPage, getMermaidExportSupport, mermaidRenderWarningHtml, PRINTABLE_DIAGRAM_HEIGHT, rasterTimeoutMs, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode, svgNaturalSize } from "${runtimeUri}";
 
     const vscode = acquireVsCodeApi();
     const payload = ${data};
@@ -298,6 +298,19 @@ ${DOCUMENT_CSS}
           const source = payload.diagrams[Number(block.dataset.mermaidIndex)];
           if (!source) continue;
 
+          const support = getMermaidExportSupport(source);
+          if (!support.supported) {
+            block.innerHTML = sanitizeExportHtml(
+              DOMPurify,
+              mermaidRenderWarningHtml(
+                support.kind,
+                source,
+                support.reason || 'Unsupported diagram type'
+              )
+            );
+            continue;
+          }
+
           try {
             const renderId = 'mdpdf-diagram-' + i + '-' + Date.now();
             const rendered = await mermaid.render(renderId, source);
@@ -335,13 +348,13 @@ ${DOCUMENT_CSS}
               }
             }
           } catch (err) {
-            const kind = detectMermaidDiagramKind(source);
             block.innerHTML = sanitizeExportHtml(
               DOMPurify,
-              '<pre><code>' + esc(source) + '</code></pre>' +
-              '<p style="color:#ef4444;font-weight:600">Diagram Render Warning (' +
-              esc(kind) + '): ' +
-              esc(err?.message || String(err)) + '</p>'
+              mermaidRenderWarningHtml(
+                support.kind,
+                source,
+                err?.message || String(err)
+              )
             );
           }
         }
@@ -519,15 +532,9 @@ ${DOCUMENT_CSS}
 
     async function svgToPng(svgEl, scale = 2, natural) {
       try {
-        const sw = natural?.width
-          || svgEl.viewBox?.baseVal?.width
-          || svgEl.getBoundingClientRect().width
-          || 800;
-        const sh = natural?.height
-          || svgEl.viewBox?.baseVal?.height
-          || svgEl.getBoundingClientRect().height
-          || 600;
-        if (sw < 1 || sh < 1) {
+        const sw = natural?.width;
+        const sh = natural?.height;
+        if (typeof sw !== 'number' || typeof sh !== 'number' || sw < 1 || sh < 1) {
           return null;
         }
         const w = Math.ceil(sw) * scale;

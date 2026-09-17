@@ -26,20 +26,45 @@ Unlike traditional PDF exporters that rely on external browser processes (Puppet
 
 ### 1. 📊 Flawless Mermaid Diagram Rendering
 - **High-DPI Retina Rasterization:** Converts SVGs to 2x/3x crisp PNG assets before PDF compilation to eliminate font blurring, dark background artifacts, or clipping.
-- **Auto-Fit & Responsive Sizing:** Constrains massive flowcharts, architecture diagrams, or sequence flows to printable page widths automatically.
-- **12+ Diagram Types Supported:**
-  - Flowcharts (`flowchart TD`, `graph LR`)
-  - Sequence Diagrams (`sequenceDiagram`)
-  - Class Diagrams (`classDiagram`)
-  - State Diagrams (`stateDiagram-v2`)
-  - Entity Relationship Diagrams (`erDiagram`)
-  - Gantt Charts (`gantt`)
-  - Git Graphs (`gitGraph`)
-  - Mindmaps (`mindmap`)
-  - Pie Charts (`pie title ...`)
-  - Quadrant Charts (`quadrantChart`)
-  - Requirement Diagrams (`requirementDiagram`)
-  - C4 Architecture (`C4Context`, `C4Container`)
+- **Auto-Fit & Responsive Sizing:** Constrains massive flowcharts, architecture diagrams, or sequence flows to printable page widths automatically. Every diagram type shares one printable-width render path (`useMaxWidth: false`, pinned `useWidth`).
+- **Mermaid 11.16.1 types:** Sample fences for every detector shipped in the installed package are in [`samples/mermaid-all-diagrams.md`](./samples/mermaid-all-diagrams.md).
+
+| Type | Keywords | Status |
+|---|---|---|
+| Flowchart | `flowchart`, `graph` | Supported |
+| Sequence | `sequenceDiagram` | Supported |
+| Class | `classDiagram`, `classDiagram-v2` | Supported |
+| State | `stateDiagram`, `stateDiagram-v2` | Supported |
+| Entity relationship | `erDiagram` | Supported |
+| Gantt | `gantt` | Supported |
+| Git graph | `gitGraph` | Supported |
+| Pie | `pie` | Supported |
+| Quadrant | `quadrantChart` | Supported |
+| Requirement | `requirementDiagram` | Supported |
+| C4 | `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment` | Supported |
+| Mindmap | `mindmap` | Supported |
+| User journey | `journey` | Supported |
+| Timeline | `timeline` | Supported |
+| Kanban | `kanban` | Supported |
+| Sankey | `sankey`, `sankey-beta` | Supported |
+| Packet | `packet`, `packet-beta` | Supported |
+| Block | `block`, `block-beta` | Supported |
+| Info | `info` | Supported |
+| XY chart | `xychart-beta` | Supported (experimental) |
+| Architecture | `architecture-beta` | Supported (experimental). Built-in icons only (`cloud`, `database`, `disk`, `internet`, `server`). Custom Iconify packs are not fetched (offline / no extra network). |
+| Event modeling | `eventmodeling` | Supported (experimental) |
+| Ishikawa | `ishikawa-beta` | Supported (experimental) |
+| Treemap | `treemap-beta` | Supported (experimental) |
+| Swimlanes | `swimlane-beta` | Supported (experimental) |
+| Radar | `radar-beta` | Supported (experimental) |
+| Tree view | `treeView-beta` | Supported (experimental). File-type Iconify icons are not registered. |
+| Venn | `venn-beta` | Supported (experimental) |
+| Wardley | `wardley-beta` | Supported (experimental) |
+| Cynefin | `cynefin-beta` | Supported (experimental) |
+| Railroad | `railroad-beta`, `railroad-ebnf-beta`, `railroad-abnf-beta`, `railroad-peg-beta` | Supported (experimental) |
+| Flowchart ELK | `flowchart-elk` | **Unsupported.** mermaid@11.16.1 registers the detector but does not bundle `@mermaid-js/layout-elk`. Export shows a per-type warning with the source fence instead of failing silently. Use `flowchart` / `graph` (dagre). |
+
+If a supported type still fails to parse or render, the PDF/HTML preview keeps the source fence and a red **Diagram Render Warning (`keyword`)** — it does not drop the diagram.
 
 ### 2. 📐 Full KaTeX LaTeX Math Typesetting
 - Seamless inline math: `$E = mc^2$`

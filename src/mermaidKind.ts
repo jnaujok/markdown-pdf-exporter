@@ -1,5 +1,5 @@
 /**
- * First diagram keyword after YAML front-matter / %% comments.
+ * First diagram keyword after YAML front-matter / %% comments / %%{init}%%.
  * Used for per-type export warnings; not a substitute for mermaid.parse().
  */
 export function detectMermaidDiagramKind(source: string): string {
@@ -8,7 +8,7 @@ export function detectMermaidDiagramKind(source: string): string {
   return match?.[1] ?? "unknown";
 }
 
-function stripPreamble(source: string): string {
+export function stripPreamble(source: string): string {
   let text = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
 
   if (text.startsWith("---")) {
@@ -18,5 +18,14 @@ function stripPreamble(source: string): string {
     }
   }
 
-  return text.replace(/^\s*%%(?!\{)[^\n]*\n?/gm, "").trimStart();
+  let previous = "";
+  while (text !== previous) {
+    previous = text;
+    text = text
+      .replace(/^\s*%%\{[\s\S]*?\}%%[ \t]*/u, "")
+      .replace(/^\s*%%(?!\{)[^\n]*\n?/, "")
+      .replace(/^\s+/, "");
+  }
+
+  return text;
 }

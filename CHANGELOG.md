@@ -2,6 +2,17 @@
 
 All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension will be documented in this file.
 
+## [1.0.5] - 2026-09-17
+
+### Added
+- Export coverage for every diagram detector shipped in mermaid@11.16.1 (stable and experimental), using one shared printable-width render path.
+- Sample fences for each type in `samples/mermaid-all-diagrams.md`, plus radar / venn / architecture examples in `test-sample.md`.
+- Per-type **Diagram Render Warning (`keyword`)** when a fence fails or is unsupported. `flowchart-elk` is documented as unsupported: ELK is not bundled.
+
+### Fixed
+- SVG→PNG no longer uses `width \|\| fallback` after natural size is known, so an explicit 0×N canvas cannot become an 800×600 default.
+- Journey/timeline labels use `textPlacement: tspan` instead of foreignObject. TreeView default icons stay off; Kanban ticket URLs are not injected.
+
 ## [1.0.4] - 2026-09-17
 
 ### Fixed
