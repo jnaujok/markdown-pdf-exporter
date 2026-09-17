@@ -8,6 +8,7 @@ All notable changes to the **Markdown to PDF (with Mermaid & Math)** extension w
 - SVG `href` and `xlink:href` are validated independently on `<image>`, `<use>`, and other resource elements, so a safe value on one attribute cannot leave a remote value on the other.
 - Mermaid SVG `<style>` nodes (including nested `defs` / nested `<svg>`) receive the page CSP nonce before insertion, so nonce-only `style-src` does not strip diagram CSS.
 - Inline `<code>` with nested markup (for example `<code><strong>foo</strong></code>`) is no longer flattened unless the span actually wraps.
+- Wrap detection indexes nested text nodes once per span instead of walking from the start for every character.
 - VSIX packaging now excludes `*.log` files.
 
 ## [1.0.2] - 2026-09-16

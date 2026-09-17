@@ -34,15 +34,22 @@ export function lineBreakOffsets(length: number, charBox: CharBoxFn): number[] {
   return offsets;
 }
 
+interface TextNodeIndexEntry {
+  node: Text;
+  start: number;
+  end: number;
+}
+
 export function offsetsForWrappingInline(el: Element): number[] {
   const text = el.textContent ?? "";
   if (text.length === 0) {
     return [0];
   }
 
+  const index = buildTextNodeIndex(el);
   const range = el.ownerDocument.createRange();
-  return lineBreakOffsets(text.length, (index) => {
-    const located = locateChar(el, index);
+  return lineBreakOffsets(text.length, (charIndex) => {
+    const located = locateChar(index, charIndex);
     if (!located) {
       return null;
     }
@@ -111,33 +118,56 @@ function applyLineSplits(el: Element, offsets: number[]): boolean {
   return true;
 }
 
-function locateChar(
-  el: Element,
-  globalIndex: number
-): { node: Text; offset: number } | null {
+function collectTextNodes(el: Element): Text[] {
   const document = el.ownerDocument;
   if (typeof document.createTreeWalker === "function") {
+    const nodes: Text[] = [];
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    let remaining = globalIndex;
     let current = walker.nextNode() as Text | null;
     while (current) {
-      const length = current.data.length;
-      if (remaining < length) {
-        return { node: current, offset: remaining };
-      }
-      remaining -= length;
+      nodes.push(current);
       current = walker.nextNode() as Text | null;
     }
-    return null;
+    return nodes;
   }
 
   const node = el.firstChild;
-  if (!node || node.nodeType !== Node.TEXT_NODE) {
-    return null;
+  if (node && node.nodeType === Node.TEXT_NODE) {
+    return [node as Text];
   }
-  const text = node as Text;
-  if (globalIndex >= text.length) {
-    return null;
+  return [];
+}
+
+function buildTextNodeIndex(el: Element): TextNodeIndexEntry[] {
+  const index: TextNodeIndexEntry[] = [];
+  let start = 0;
+  for (const node of collectTextNodes(el)) {
+    const length = node.data.length;
+    if (length === 0) {
+      continue;
+    }
+    index.push({ node, start, end: start + length });
+    start += length;
   }
-  return { node: text, offset: globalIndex };
+  return index;
+}
+
+function locateChar(
+  index: TextNodeIndexEntry[],
+  globalIndex: number
+): { node: Text; offset: number } | null {
+  let lo = 0;
+  let hi = index.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const entry = index[mid];
+    if (globalIndex < entry.start) {
+      hi = mid - 1;
+    } else if (globalIndex >= entry.end) {
+      lo = mid + 1;
+    } else {
+      return { node: entry.node, offset: globalIndex - entry.start };
+    }
+  }
+  return null;
 }
