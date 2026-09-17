@@ -173,7 +173,7 @@ ${DOCUMENT_CSS}
   <article id="document"></article>
 
   <script type="module" nonce="${nonce}">
-    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode } from "${runtimeUri}";
+    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, buildMermaidInitConfig, detectMermaidDiagramKind, fitDiagramToPage, PRINTABLE_DIAGRAM_HEIGHT, rasterTimeoutMs, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode, svgNaturalSize } from "${runtimeUri}";
 
     const vscode = acquireVsCodeApi();
     const payload = ${data};
@@ -283,22 +283,7 @@ ${DOCUMENT_CSS}
 
       // --- Initialize Mermaid Engine ---
       const mermaidTheme = payload.options.previewTheme || 'default';
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: mermaidTheme,
-        htmlLabels: false,
-        suppressErrorRendering: true,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        themeVariables: {
-          background: '#ffffff',
-          primaryTextColor: '#111827',
-          secondaryTextColor: '#111827',
-          tertiaryTextColor: '#111827',
-          lineColor: '#374151',
-          textColor: '#111827'
-        }
-      });
+      mermaid.initialize(buildMermaidInitConfig(mermaidTheme));
 
       const blocks = [...article.querySelectorAll('[data-mermaid-index]')];
       if (blocks.length > 0) {
@@ -319,26 +304,43 @@ ${DOCUMENT_CSS}
             const svgEl = attachSanitizedSvg(block, rendered.svg);
             if (svgEl) {
               const dpiScale = payload.options.highDpi || 2;
-              const png = await withTimeout(svgToPng(svgEl, dpiScale), 10000);
-              if (png) {
+              const box = svgEl.viewBox?.baseVal;
+              const bounds = svgEl.getBoundingClientRect();
+              const size = svgNaturalSize(
+                box?.width,
+                box?.height,
+                bounds.width,
+                bounds.height
+              );
+              const png = await withTimeout(
+                svgToPng(svgEl, dpiScale, size),
+                rasterTimeoutMs(size.width, size.height, dpiScale)
+              );
+              if (png && png.width >= 1 && png.height >= 1) {
                 const img = document.createElement('img');
                 const availableWidth = Math.max(1, block.clientWidth - 32);
-                const printableHeight = 860;
-                const fit = Math.min(1, availableWidth / png.width, printableHeight / png.height);
+                const fit = fitDiagramToPage(
+                  png.width,
+                  png.height,
+                  availableWidth,
+                  PRINTABLE_DIAGRAM_HEIGHT
+                );
 
                 img.src = png.url;
                 img.alt = 'Mermaid Diagram ' + (i + 1);
-                img.width = Math.max(1, Math.floor(png.width * fit));
-                img.height = Math.max(1, Math.floor(png.height * fit));
+                img.width = fit.width;
+                img.height = fit.height;
                 block.innerHTML = '';
                 block.appendChild(img);
               }
             }
           } catch (err) {
+            const kind = detectMermaidDiagramKind(source);
             block.innerHTML = sanitizeExportHtml(
               DOMPurify,
               '<pre><code>' + esc(source) + '</code></pre>' +
-              '<p style="color:#ef4444;font-weight:600">Diagram Render Warning: ' +
+              '<p style="color:#ef4444;font-weight:600">Diagram Render Warning (' +
+              esc(kind) + '): ' +
               esc(err?.message || String(err)) + '</p>'
             );
           }
@@ -515,11 +517,19 @@ ${DOCUMENT_CSS}
       ]);
     }
 
-    async function svgToPng(svgEl, scale = 2) {
+    async function svgToPng(svgEl, scale = 2, natural) {
       try {
-        const box = svgEl.viewBox?.baseVal;
-        const sw = box?.width || svgEl.getBoundingClientRect().width || 800;
-        const sh = box?.height || svgEl.getBoundingClientRect().height || 600;
+        const sw = natural?.width
+          || svgEl.viewBox?.baseVal?.width
+          || svgEl.getBoundingClientRect().width
+          || 800;
+        const sh = natural?.height
+          || svgEl.viewBox?.baseVal?.height
+          || svgEl.getBoundingClientRect().height
+          || 600;
+        if (sw < 1 || sh < 1) {
+          return null;
+        }
         const w = Math.ceil(sw) * scale;
         const h = Math.ceil(sh) * scale;
 
