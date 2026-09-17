@@ -7,6 +7,7 @@ import { marked } from "marked";
 import mermaid from "mermaid";
 
 export { splitWrappingInlineCode } from "./codeSpanLayout";
+export { applyNonceToStyleElements } from "./csp";
 export { sanitizeExportHtml, sanitizeExportSvg } from "./sanitizeHtml";
 
 export default mermaid;

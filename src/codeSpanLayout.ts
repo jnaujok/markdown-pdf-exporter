@@ -40,16 +40,14 @@ export function offsetsForWrappingInline(el: Element): number[] {
     return [0];
   }
 
-  flattenToSingleTextNode(el, text);
-  const node = el.firstChild;
-  if (!node || node.nodeType !== Node.TEXT_NODE) {
-    return [0];
-  }
-
   const range = el.ownerDocument.createRange();
   return lineBreakOffsets(text.length, (index) => {
-    range.setStart(node, index);
-    range.setEnd(node, index + 1);
+    const located = locateChar(el, index);
+    if (!located) {
+      return null;
+    }
+    range.setStart(located.node, located.offset);
+    range.setEnd(located.node, located.offset + 1);
     if (typeof range.getBoundingClientRect !== "function") {
       return null;
     }
@@ -113,13 +111,33 @@ function applyLineSplits(el: Element, offsets: number[]): boolean {
   return true;
 }
 
-function flattenToSingleTextNode(el: Element, text: string): void {
-  el.normalize();
-  if (el.childNodes.length === 1 && el.firstChild?.nodeType === Node.TEXT_NODE) {
-    return;
+function locateChar(
+  el: Element,
+  globalIndex: number
+): { node: Text; offset: number } | null {
+  const document = el.ownerDocument;
+  if (typeof document.createTreeWalker === "function") {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let remaining = globalIndex;
+    let current = walker.nextNode() as Text | null;
+    while (current) {
+      const length = current.data.length;
+      if (remaining < length) {
+        return { node: current, offset: remaining };
+      }
+      remaining -= length;
+      current = walker.nextNode() as Text | null;
+    }
+    return null;
   }
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
+
+  const node = el.firstChild;
+  if (!node || node.nodeType !== Node.TEXT_NODE) {
+    return null;
   }
-  el.appendChild(el.ownerDocument.createTextNode(text));
+  const text = node as Text;
+  if (globalIndex >= text.length) {
+    return null;
+  }
+  return { node: text, offset: globalIndex };
 }

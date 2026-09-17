@@ -89,13 +89,27 @@ describe("splitWrappingInlineCode", () => {
     expect(root.querySelectorAll("code")).toHaveLength(1);
   });
 
-  it("flattens nested markup before splitting", () => {
+  it("splits wrapping nested markup into plain text fragments", () => {
     const root = articleWith(`<p><code><span>abcdef</span></code></p>`);
     expect(splitWrappingInlineCode(root, () => [0, 3])).toBe(1);
     expect([...root.querySelectorAll("code")].map((el) => el.textContent)).toEqual([
       "abc",
       "def",
     ]);
+  });
+
+  it("preserves nested markup when the span does not wrap", () => {
+    const root = articleWith(`<p>keep <code><strong>foo</strong></code> intact</p>`);
+    expect(splitWrappingInlineCode(root, () => [0])).toBe(0);
+    const code = root.querySelector("code");
+    expect(code?.querySelector("strong")?.textContent).toBe("foo");
+    expect(code?.innerHTML).toContain("<strong>foo</strong>");
+  });
+
+  it("preserves nested markup when default wrap detection finds a single line", () => {
+    const root = articleWith(`<p>keep <code><strong>foo</strong></code> intact</p>`);
+    expect(splitWrappingInlineCode(root)).toBe(0);
+    expect(root.querySelector("code strong")?.textContent).toBe("foo");
   });
 
   it("ignores empty code and detached-offset input", () => {
@@ -177,5 +191,50 @@ describe("offsetsForWrappingInline", () => {
     expect(offsetsForWrappingInline(root.querySelector("code") as Element)).toEqual([
       0,
     ]);
+  });
+
+  it("does not flatten nested markup when measuring a single-line span", () => {
+    const root = articleWith(`<p><code><strong>foo</strong> bar</code></p>`);
+    const code = root.querySelector("code") as Element;
+    expect(offsetsForWrappingInline(code)).toEqual([0]);
+    expect(code.querySelector("strong")?.textContent).toBe("foo");
+    expect(code.innerHTML).toContain("<strong>foo</strong>");
+  });
+
+  it("measures wrap offsets across nested child text nodes without flattening first", () => {
+    const root = articleWith(`<p><code><strong>abcd</strong>efgh</code></p>`);
+    const code = root.querySelector("code") as Element;
+    const createRange = code.ownerDocument.createRange.bind(code.ownerDocument);
+    code.ownerDocument.createRange = () => {
+      const range = createRange();
+      let startNode: Node | null = null;
+      let start = 0;
+      range.setStart = ((node: Node, offset: number) => {
+        startNode = node;
+        start = offset;
+      }) as typeof range.setStart;
+      range.setEnd = (() => undefined) as typeof range.setEnd;
+      range.getBoundingClientRect = () => {
+        const global =
+          startNode && startNode.parentElement?.tagName === "STRONG"
+            ? start
+            : start + 4;
+        return {
+          top: global < 4 ? 0 : 20,
+          height: 16,
+          width: 8,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      };
+      return range;
+    };
+
+    expect(offsetsForWrappingInline(code)).toEqual([0, 4]);
+    expect(code.querySelector("strong")).not.toBeNull();
   });
 });
