@@ -12,5 +12,6 @@ package-lock.json
 yarn.lock
 *.vsix
 .DS_Store
+*.log
 *.map
 test-sample.md

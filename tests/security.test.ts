@@ -2,7 +2,7 @@ import * as path from "path";
 import { JSDOM } from "jsdom";
 import DOMPurify from "dompurify";
 import { describe, expect, it } from "vitest";
-import { webviewCsp } from "../src/csp";
+import { applyNonceToStyleElements, webviewCsp } from "../src/csp";
 import {
   hasUriScheme,
   imageMimeType,
@@ -16,6 +16,7 @@ import {
   dropUnsafeResourceAttrs,
   EXPORT_PURIFY_CONFIG,
   isSafeDataImage,
+  isSafeFragmentHref,
   sanitizeExportHtml,
   sanitizeExportSvg,
 } from "../src/sanitizeHtml";
@@ -42,6 +43,52 @@ describe("webview CSP", () => {
 
   it("rejects a nonce that could break out of the policy", () => {
     expect(() => webviewCsp("abc; img-src *", "https://x")).toThrow(/Invalid CSP nonce/);
+  });
+});
+
+describe("applyNonceToStyleElements", () => {
+  const nonce = "nOnce_123";
+
+  it("stamps the nonce on nested Mermaid style nodes, including defs and nested svg", () => {
+    const { window } = new JSDOM("<!doctype html>");
+    const root = window.document.createElement("div");
+    root.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg">
+        <style>.root { color: red; }</style>
+        <defs>
+          <style>.defs { color: blue; }</style>
+        </defs>
+        <g>
+          <svg>
+            <style>.nested { color: green; }</style>
+          </svg>
+        </g>
+      </svg>
+      <style>.sibling { color: black; }</style>
+    `;
+
+    expect(applyNonceToStyleElements(root, nonce)).toBe(4);
+    const styles = [...root.querySelectorAll("style")];
+    expect(styles).toHaveLength(4);
+    for (const style of styles) {
+      expect(style.getAttribute("nonce")).toBe(nonce);
+    }
+  });
+
+  it("does not miss style nodes that are not direct svg children", () => {
+    const { window } = new JSDOM("<!doctype html>");
+    const root = window.document.createElement("div");
+    root.innerHTML = `<div><svg><g><style id="deep">.x{}</style></g></svg></div>`;
+
+    applyNonceToStyleElements(root, nonce);
+    expect(root.querySelector("#deep")?.getAttribute("nonce")).toBe(nonce);
+  });
+
+  it("rejects a nonce that could break out of the policy", () => {
+    const { window } = new JSDOM("<!doctype html>");
+    expect(() =>
+      applyNonceToStyleElements(window.document.body, "abc; img-src *")
+    ).toThrow(/Invalid CSP nonce/);
   });
 });
 
@@ -194,6 +241,87 @@ describe("HTML sanitizer", () => {
     source.setAttribute("src", "https://evil.example/x.png");
     dropUnsafeResourceAttrs(source);
     expect(source.getAttribute("src")).toBeNull();
+  });
+
+  it("classifies fragment hrefs used by SVG <use>", () => {
+    expect(isSafeFragmentHref("#marker")).toBe(true);
+    expect(isSafeFragmentHref("#foo-bar_1")).toBe(true);
+    expect(isSafeFragmentHref("https://evil.example/x.svg#icon")).toBe(false);
+    expect(isSafeFragmentHref("javascript:alert(1)")).toBe(false);
+    expect(isSafeFragmentHref("#foo:bar")).toBe(false);
+  });
+
+  it("validates href and xlink:href independently on SVG image mixed pairs", () => {
+    const png =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const { window } = new JSDOM("<!doctype html>");
+    const xlinkNs = "http://www.w3.org/1999/xlink";
+    const svgNs = "http://www.w3.org/2000/svg";
+
+    const hrefAttrs = (el: Element) =>
+      [...el.attributes]
+        .filter((attr) => attr.localName === "href" || attr.name === "xlink:href")
+        .map((attr) => ({ ns: attr.namespaceURI, value: attr.value }));
+
+    const safeHrefUnsafeXlink = window.document.createElementNS(svgNs, "image");
+    safeHrefUnsafeXlink.setAttribute("href", png);
+    safeHrefUnsafeXlink.setAttributeNS(xlinkNs, "href", "https://evil.example/x.png");
+    dropUnsafeResourceAttrs(safeHrefUnsafeXlink);
+    expect(hrefAttrs(safeHrefUnsafeXlink)).toEqual([{ ns: null, value: png }]);
+
+    const unsafeHrefSafeXlink = window.document.createElementNS(svgNs, "image");
+    unsafeHrefSafeXlink.setAttribute("href", "https://evil.example/x.png");
+    unsafeHrefSafeXlink.setAttributeNS(xlinkNs, "href", png);
+    dropUnsafeResourceAttrs(unsafeHrefSafeXlink);
+    expect(hrefAttrs(unsafeHrefSafeXlink)).toEqual([{ ns: xlinkNs, value: png }]);
+
+    const bothUnsafe = window.document.createElementNS(svgNs, "image");
+    bothUnsafe.setAttribute("href", "https://evil.example/a.png");
+    bothUnsafe.setAttribute("xlink:href", "https://evil.example/b.png");
+    dropUnsafeResourceAttrs(bothUnsafe);
+    expect(hrefAttrs(bothUnsafe)).toEqual([]);
+  });
+
+  it("validates href and xlink:href independently on SVG use mixed pairs", () => {
+    const { window } = new JSDOM("<!doctype html>");
+    const xlinkNs = "http://www.w3.org/1999/xlink";
+    const svgNs = "http://www.w3.org/2000/svg";
+
+    const use = window.document.createElementNS(svgNs, "use");
+    use.setAttribute("href", "#arrow");
+    use.setAttributeNS(xlinkNs, "href", "https://evil.example/sprite.svg#icon");
+    dropUnsafeResourceAttrs(use);
+    expect(use.getAttribute("href")).toBe("#arrow");
+    expect(use.getAttributeNS(xlinkNs, "href")).toBeNull();
+
+    const remoteUse = window.document.createElementNS(svgNs, "use");
+    remoteUse.setAttribute("href", "https://evil.example/sprite.svg#icon");
+    remoteUse.setAttribute("xlink:href", "#local");
+    dropUnsafeResourceAttrs(remoteUse);
+    expect(remoteUse.getAttribute("href")).toBeNull();
+    expect(remoteUse.getAttribute("xlink:href")).toBe("#local");
+  });
+
+  it("drops a remote xlink:href on SVG image even when href is a safe data URI", () => {
+    const png =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const purify = DOMPurify(new JSDOM("<!doctype html>").window);
+    const svg = sanitizeExportSvg(
+      purify,
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><image href="${png}" xlink:href="https://evil.example/x.png" width="10" height="10"/></svg>`
+    );
+    expect(svg).toContain(png);
+    expect(svg).not.toContain("https://evil.example");
+  });
+
+  it("keeps fragment-only <use> hrefs and drops remote mixed pairs through SVG sanitization", () => {
+    const purify = DOMPurify(new JSDOM("<!doctype html>").window);
+    const svg = sanitizeExportSvg(
+      purify,
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><path id="arrow" d="M0 0"/></defs><use href="#arrow" xlink:href="https://evil.example/sprite.svg#icon"/></svg>`
+    );
+    expect(svg).toMatch(/href="#arrow"/);
+    expect(svg).not.toContain("https://evil.example");
   });
 });
 

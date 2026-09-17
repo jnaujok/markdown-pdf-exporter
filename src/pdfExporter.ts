@@ -173,7 +173,7 @@ ${DOCUMENT_CSS}
   <article id="document"></article>
 
   <script type="module" nonce="${nonce}">
-    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode } from "${runtimeUri}";
+    import mermaid, { DOMPurify, html2canvas, jsPDF, katex, katexCss, marked, applyNonceToStyleElements, sanitizeExportHtml, sanitizeExportSvg, splitWrappingInlineCode } from "${runtimeUri}";
 
     const vscode = acquireVsCodeApi();
     const payload = ${data};
@@ -188,9 +188,7 @@ ${DOCUMENT_CSS}
     const attachSanitizedSvg = (container, svgMarkup) => {
       const temp = document.createElement('div');
       temp.innerHTML = sanitizeExportSvg(DOMPurify, svgMarkup);
-      temp.querySelectorAll('svg style').forEach(style => {
-        style.setAttribute('nonce', '${nonce}');
-      });
+      applyNonceToStyleElements(temp, '${nonce}');
       container.replaceChildren(...temp.childNodes);
       return container.querySelector('svg');
     };

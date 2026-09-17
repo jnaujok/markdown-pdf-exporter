@@ -2,6 +2,7 @@ import type { Config } from "dompurify";
 
 export const EXPORT_SVG_PURIFY_CONFIG: Config = {
   USE_PROFILES: { svg: true, svgFilters: true },
+  ADD_TAGS: ["use"],
   ALLOW_UNKNOWN_PROTOCOLS: false,
 };
 
@@ -65,36 +66,91 @@ export interface PurifyLike {
   sanitize(html: string, config: Config): string;
 }
 
+const SRC_TAGS = new Set(["img", "source", "image", "feimage"]);
+const DATA_IMAGE_HREF_TAGS = new Set(["img", "image", "feimage"]);
+const FRAGMENT_HREF_TAGS = new Set([
+  "use",
+  "pattern",
+  "lineargradient",
+  "radialgradient",
+  "filter",
+  "clippath",
+  "mask",
+  "textpath",
+  "mpath",
+  "tref",
+  "altglyph",
+  "glyphref",
+  "cursor",
+  "animate",
+  "set",
+  "animatetransform",
+  "animatemotion",
+]);
+
 export function isSafeDataImage(src: string): boolean {
   return /^data:image\/(?:png|jpe?g|gif|webp|bmp|svg\+xml)(?:;charset=[^;]+)?;base64,/i.test(
     src.trim()
   );
 }
 
+export function isSafeFragmentHref(value: string): boolean {
+  return /^#[^:\s/#?]+$/.test(value.trim());
+}
+
+function isAllowedHref(tag: string, value: string): boolean {
+  if (DATA_IMAGE_HREF_TAGS.has(tag)) {
+    return isSafeDataImage(value);
+  }
+  if (FRAGMENT_HREF_TAGS.has(tag)) {
+    return isSafeFragmentHref(value);
+  }
+  if (tag === "a") {
+    return !/^\s*(?:javascript|data|vbscript|file):/i.test(value);
+  }
+  return isSafeFragmentHref(value) || isSafeDataImage(value);
+}
+
+function isHrefAttr(attr: Attr): boolean {
+  return attr.localName === "href" || attr.name === "href" || attr.name === "xlink:href";
+}
+
+function removeHrefAttr(node: Element, attr: Attr): void {
+  if (attr.namespaceURI && typeof node.removeAttributeNS === "function") {
+    node.removeAttributeNS(attr.namespaceURI, attr.localName);
+    return;
+  }
+  node.removeAttribute(attr.name);
+}
+
 export function dropUnsafeResourceAttrs(node: Element): void {
+  if (typeof node.tagName !== "string" || !node.attributes) {
+    return;
+  }
+
   const tag = node.tagName.toLowerCase();
 
-  if (tag === "img" || tag === "source" || tag === "image") {
-    const attrs = tag === "image" ? ["href", "xlink:href"] : ["src"];
-    for (const attr of attrs) {
-      const value = node.getAttribute(attr);
-      if (value !== null && !isSafeDataImage(value)) {
-        node.removeAttribute(attr);
-      }
+  if (SRC_TAGS.has(tag)) {
+    const src = node.getAttribute("src");
+    if (src !== null && !isSafeDataImage(src)) {
+      node.removeAttribute("src");
     }
     node.removeAttribute("srcset");
   }
 
-  if (tag === "a") {
-    const href = node.getAttribute("href") ?? "";
-    if (/^\s*(?:javascript|data|vbscript|file):/i.test(href)) {
-      node.removeAttribute("href");
+  for (const attr of Array.from(node.attributes)) {
+    if (!isHrefAttr(attr)) {
+      continue;
+    }
+    if (!isAllowedHref(tag, attr.value)) {
+      removeHrefAttr(node, attr);
     }
   }
 }
 
 function installHooks(purify: PurifyLike): void {
   if (!hooked.has(purify)) {
+    purify.addHook("beforeSanitizeAttributes", dropUnsafeResourceAttrs);
     purify.addHook("afterSanitizeAttributes", dropUnsafeResourceAttrs);
     hooked.add(purify);
   }
